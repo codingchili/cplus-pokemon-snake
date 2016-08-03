@@ -1,16 +1,19 @@
 #include <iostream>
 #include <Windows.h>
 #include "Graphics.h"
+#include "Resources.h"
+#include "Renderer.h"
 
 using namespace std;
 
 const char *TITLE = "PokeSnake - Gotta eat em' all.";
-const int WIDTH = 524;
-const int HEIGHT = 524;
+const int WIDTH = 518;
+const int HEIGHT = 541;
 char className[] = {"GameWindowClass"};
 
-
-// todo snake.cpp - game logic, input.cpp - handle player input, render.cpp - render the snake
+Resources *resources = new Resources();
+Renderer *renderer = new Renderer(resources);
+Game *game = new Game();
 
 /**
  * Handles paint messages by redrawing the map, player and info.
@@ -32,34 +35,26 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         case WM_CLOSE:
             PostQuitMessage(0);
             return 0;
+        default:
+            break;
     }
     return DefWindowProc(hwnd, msg, wParam, lParam);
 }
 
-void Render(HWND hwnd) {
-    HDC hdc = GetDC(hwnd);
-
-    Rectangle(hdc, 10, 10, 100, 100);
-
-    ReleaseDC(hwnd, hdc);
+void UpdateGame() {
+    renderer->render(game);
 }
 
-void UpdateGame(HWND hwnd) {
-    // todo -- async stuff --
-    // todo process input
-    // todo modify game fsm
-    // todo Render
-
-    Render(hwnd);
-}
-
-void InitializeGame(HWND hwnd) {
+bool InitializeGame(HWND hwnd) {
     InitializeGraphics(hwnd);
-    // todo load resource
+
+    return resources->load();
 }
 
 void ShutdownGame() {
-    // todo unload resources
+    delete resources;
+    delete game;
+    delete renderer;
     ShutdownGraphics();
 }
 
@@ -69,7 +64,7 @@ void ShutdownGame() {
 void HandleMessages(HWND hwnd) {
     InitializeGame(hwnd);
 
-    while(1) {
+    while (1) {
         MSG msg = {0};
 
         if (PeekMessage(&msg, 0, 0, 0, PM_REMOVE)) {
@@ -81,7 +76,7 @@ void HandleMessages(HWND hwnd) {
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         } else {
-            UpdateGame(hwnd);
+            UpdateGame();
         }
     }
 }
