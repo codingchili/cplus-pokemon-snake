@@ -1,6 +1,8 @@
 #ifndef GRAPHICS_HPP_
 #define GRAPHICS_HPP_
 
+#include <afxres.h>
+
 struct Bitmap {
     int index;
 };
@@ -12,6 +14,8 @@ bool LoadBitmapFromFile(const char *filename, Bitmap &bitmap);
 void BeginGraphics();
 
 void DrawBitmap(Bitmap bitmap, int x, int y);
+
+void DrawingTextColor(int r, int g, int b);
 
 void DrawString(const char *text, int x, int y);
 

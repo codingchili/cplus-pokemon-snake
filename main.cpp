@@ -3,17 +3,19 @@
 #include "Graphics.h"
 #include "Resources.h"
 #include "Renderer.h"
+#include "Input.h"
 
 using namespace std;
 
 const char *TITLE = "PokeSnake - Gotta eat em' all.";
 const int WIDTH = 518;
 const int HEIGHT = 541;
+const int FPS = 90;
 char className[] = {"GameWindowClass"};
 
 Resources *resources = new Resources();
-Renderer *renderer = new Renderer(resources);
-Game *game = new Game();
+Renderer *render = new Renderer(resources);
+Game *game;
 
 /**
  * Handles paint messages by redrawing the map, player and info.
@@ -41,20 +43,44 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     return DefWindowProc(hwnd, msg, wParam, lParam);
 }
 
-void UpdateGame() {
-    renderer->render(game);
+
+void StartView() {
+    render->StartView();
+
+    if (Input::GetSelect()) {
+        game = new Game();
+    }
 }
 
-bool InitializeGame(HWND hwnd) {
-    InitializeGraphics(hwnd);
+void GameoverView() {
+    render->GameOver(game);
 
-    return resources->load();
+    if (Input::GetSelect()) {
+        delete game;
+        game = nullptr;
+    }
+}
+
+void GameView() {
+    game->Tick();
+    game->SetPlayerFacing(Input::GetDirection());
+    render->Gameplay(game);
+}
+
+void UpdateGame() {
+    if (game == nullptr) {
+        StartView();
+    } else if (game->Lost() || game->Won()) {
+        GameoverView();
+    } else {
+        GameView();
+    }
 }
 
 void ShutdownGame() {
     delete resources;
     delete game;
-    delete renderer;
+    delete render;
     ShutdownGraphics();
 }
 
@@ -62,22 +88,28 @@ void ShutdownGame() {
  * Pops messages from the application event queue.
  */
 void HandleMessages(HWND hwnd) {
-    InitializeGame(hwnd);
+    InitializeGraphics(hwnd);
 
-    while (1) {
-        MSG msg = {0};
+    if (resources->Load()) {
+        while (1) {
+            MSG msg = {0};
 
-        if (PeekMessage(&msg, 0, 0, 0, PM_REMOVE)) {
-            if (msg.message == WM_QUIT) {
-                ShutdownGame();
-                break;
+            if (PeekMessage(&msg, 0, 0, 0, PM_REMOVE)) {
+                if (msg.message == WM_QUIT) {
+                    ShutdownGame();
+                    break;
+                }
+
+                TranslateMessage(&msg);
+                DispatchMessage(&msg);
+            } else {
+                Sleep(1000 / FPS);
+                UpdateGame();
             }
-
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        } else {
-            UpdateGame();
         }
+    } else {
+        ShutdownGraphics();
+        exit(404);
     }
 }
 

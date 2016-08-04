@@ -76,6 +76,10 @@ void DrawBitmap(Bitmap bitmap, int x, int y) {
     BitBlt(backbufferDC, x, y, gdi.width, gdi.height, bitmapDC, 0, 0, SRCCOPY);
 }
 
+void DrawingTextColor(int r, int g, int b) {
+    SetTextColor(backbufferDC, RGB(r, g, b));
+}
+
 void DrawString(const char *text, int x, int y) {
     TextOut(backbufferDC, x, y, text, strlen(text));
 }
