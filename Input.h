@@ -1,6 +1,8 @@
-//
-// Created by chili on 2016-08-04.
-//
+/**
+ * @author Robin Duda
+ *
+ * Handles keyboard input.
+ */
 
 #ifndef CPLUS_POKESNAKE_INPUT_H
 #define CPLUS_POKESNAKE_INPUT_H

@@ -1,7 +1,3 @@
-//
-// Created by chili on 2016-08-03.
-//
-
 #include "Graphics.h"
 #include "Resources.h"
 

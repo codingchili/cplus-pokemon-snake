@@ -1,10 +1,7 @@
-//
-// Created by chili on 2016-08-03.
-//
-
 #include <cstdlib>
 #include <ctime>
 #include "Game.h"
+#include "Level.h"
 
 Game::Game() {
     srand((unsigned int) time(NULL));
@@ -21,6 +18,8 @@ Game::Game() {
         map[MAP_SIZE - 1][i] = WALL;
         map[i][MAP_SIZE - 1] = WALL;
     }
+
+    Reset();
 }
 
 Game::~Game() {
@@ -33,7 +32,6 @@ Game::~Game() {
             delete pokemon[i];
         }
     }
-
     delete player;
 }
 
@@ -42,21 +40,18 @@ Game::~Game() {
  * Handles dynamic tiles that move during the gameplay.
  */
 char Game::GetTile(int x, int y) {
-    int tick_seed = (tick / 60) % MAP_SIZE;
+    int tick_seed = (animationTick / 60) % MAP_SIZE;
+    char dynamic_tile = Level::GetTile(x, y, level, tick_seed);
 
-    if (x == tick_seed) {
-        if (y == 5 || y == 16 || y == 26)
-            return WALL;
-    }
-    return map[x][y];
+    return (dynamic_tile == WALL) ? WALL : map[x][y];
 }
 
 int Game::GetPlayerX() {
-    return player->position.x;
+    return (int) player->position.x;
 }
 
 int Game::GetPlayerY() {
-    return player->position.y;
+    return (int) player->position.y;
 }
 
 void Game::SetPlayerFacing(int direction) {
@@ -68,26 +63,55 @@ Pokemon *Game::GetPokemon(int index) {
     return pokemon[index];
 }
 
-void Game::Tick() {
-    Move();
-    Capture();
-    Spawn();
-    tick++;
+void Game::Update() {
+    if (state == STATE_GAMEPLAY) {
+        Move();
+        captured = Capture();
+        Spawn();
+
+        if (Lost())
+            state = STATE_GAMEOVER;
+        else if (Won()) {
+            state = STATE_GAMEWIN;
+        } else if (LevelCleared()) {
+            state = STATE_NEXTLEVEL;
+        }
+
+        gameplayTick++;
+        animationTick++;
+    }
+}
+
+void Game::Reset() {
+    animationTick = 1;
+
+    for (int i = 0; i < PLAYER_MAXLEN; i++) {
+        player->segment[i]->attached = false;
+    }
+
+    for (int i = 0; i < POKEMON_MAX; i++) {
+        delete pokemon[i];
+        pokemon[i] = nullptr;
+    }
+
+    player->direction = SOUTH;
+    player->position.x = 365;
+    player->position.y = 125;
 }
 
 void Game::Move() {
     switch (player->direction) {
         case NORTH:
-            player->position.y--;
+            player->position.y -= GetPlayerSpeed();
             break;
         case WEST:
-            player->position.x--;
+            player->position.x -= GetPlayerSpeed();
             break;
         case SOUTH:
-            player->position.y++;
+            player->position.y += GetPlayerSpeed();
             break;
         case EAST:
-            player->position.x++;
+            player->position.x += GetPlayerSpeed();
             break;
         default:
             break;
@@ -95,11 +119,20 @@ void Game::Move() {
     UpdateSegments();
 }
 
+/**
+ * Calculates the player speed based on the current level and number of attached segments.
+ */
+double Game::GetPlayerSpeed() {
+    return ((level - 1) * LEVEL_SPEED_BONUS + GetSegmentCount() * SEGMENT_SPEED_BONUS + BASE_SPEED);
+}
+
+/**
+ * Moves all segments forward whenever the head is one full segment away.
+ */
 void Game::UpdateSegments() {
-    // Check the distance from the head to the first segment.
     if (MinimumDistanceEitherAxis(player->position, player->segment[0]->position, TILE_SIZE)) {
 
-        // Right shift on all the segments positions, including head.
+        // Right shift the positions of all the segments to simulate movement.
         for (int i = PLAYER_MAXLEN - 1; i >= 0; i--) {
             Position *segment = &player->segment[i]->position;
             Position *previous = &player->segment[i - 1]->position;
@@ -115,11 +148,17 @@ void Game::UpdateSegments() {
     }
 }
 
+/**
+ * Determine if the distance between two points on either axis is greater than the given distance.
+ */
 bool Game::MinimumDistanceEitherAxis(Position p1, Position p2, int maxDistance) {
-    return (abs(p1.x - p2.x) >= maxDistance) || (abs(p1.y - p2.y) >= maxDistance);
+    return (abs((int) (p1.x - p2.x)) >= maxDistance) || (abs((int) (p1.y - p2.y)) >= maxDistance);
 }
 
-void Game::Capture() {
+/**
+ * Adds a pokemon that collides with the head as a segment.
+ */
+bool Game::Capture() {
     for (int i = 0; i < POKEMON_MAX; i++) {
 
         if (pokemon[i] != nullptr) {
@@ -128,13 +167,18 @@ void Game::Capture() {
                 pokemon[i] = nullptr;
 
                 AddSegment();
+                return true;
             }
         }
     }
+    return false;
 }
 
+/**
+ * Check for a collision between two points using given radius.
+ */
 bool Game::CheckCollison(Position object, Position fixed, int size) {
-    return abs(object.x - fixed.x) < size && abs(object.y - fixed.y) < size;
+    return abs((int) (object.x - fixed.x)) < size && abs((int) (object.y - fixed.y)) < size;
 }
 
 void Game::AddSegment() {
@@ -146,6 +190,9 @@ void Game::AddSegment() {
     }
 }
 
+/**
+ * Adds a new pokemon in a random position on the map.
+ */
 void Game::Spawn() {
     if (rand() % SPAWN_RATE == 0) {
 
@@ -186,7 +233,7 @@ bool Game::HitWall() {
 }
 
 bool Game::CheckWallCollision(Position object, int x, int y) {
-    return (abs(object.x - x * TILE_SIZE) < TILE_SIZE && abs(object.y - y * TILE_SIZE) < TILE_SIZE);
+    return (abs((int) (object.x - x * TILE_SIZE)) < TILE_SIZE && abs((int) (object.y - y * TILE_SIZE)) < TILE_SIZE);
 }
 
 /**
@@ -203,6 +250,9 @@ bool Game::CheckSegmentWallCollision(int x, int y) {
     return false;
 }
 
+/**
+ * Check if the head has moved into any of its attached segments.
+ */
 bool Game::HitSelf() {
     for (int i = 1; i < PLAYER_MAXLEN; i++) {
         Segment *segment = player->segment[i];
@@ -215,6 +265,10 @@ bool Game::HitSelf() {
 }
 
 bool Game::Won() {
+    return (LevelCleared() && level == MAX_LEVEL);
+}
+
+bool Game::LevelCleared() {
     return (GetSegmentCount() == PLAYER_MAXLEN);
 }
 
@@ -232,6 +286,44 @@ int Game::GetSegmentCount() {
 Segment *Game::GetSegment(int index) {
     return player->segment[index];
 }
+
+void Game::End() {
+    state = STATE_START;
+}
+
+void Game::Start() {
+    level = 1;
+    gameplayTick = 0;
+    Reset();
+    state = STATE_GAMEPLAY;
+}
+
+void Game::StartNextLevel() {
+    state = STATE_GAMEPLAY;
+    level++;
+    Reset();
+}
+
+int Game::GetState() {
+    return state;
+}
+
+int Game::GetLevel() {
+    return level;
+}
+
+int Game::GetTime() {
+    return gameplayTick;
+}
+
+bool Game::WasCaptured() {
+    return captured;
+}
+
+
+
+
+
 
 
 

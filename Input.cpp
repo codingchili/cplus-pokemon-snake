@@ -1,7 +1,3 @@
-//
-// Created by chili on 2016-08-04.
-//
-
 #include <afxres.h>
 #include "Input.h"
 #include "Game.h"

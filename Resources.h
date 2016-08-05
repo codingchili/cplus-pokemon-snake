@@ -1,6 +1,8 @@
-//
-// Created by chili on 2016-08-03.
-//
+/**
+ * @author Robin Duda
+ *
+ * Handles the loading of resource files.
+ */
 
 #ifndef CPLUS_POKESNAKE_RESOURCES_H
 #define CPLUS_POKESNAKE_RESOURCES_H
@@ -9,9 +11,10 @@
 
 class Resources {
 private:
-    static const int FILE_COUNT = 10;
+    static const int FILE_COUNT = 11;
     const char *FILES[FILE_COUNT] = {"background.bmp", "wall.bmp", "head.bmp", "segment.bmp", "start.bmp",
-                                     "start-game.bmp", "gameover.bmp", "gamewin.bmp", "mew.bmp", "pikachu.bmp"};
+                                     "start-game.bmp", "gameover.bmp", "gamewin.bmp", "mew.bmp", "pikachu.bmp",
+                                     "nextlevel.bmp"};
 public:
     Bitmap background;
     Bitmap head;
@@ -23,8 +26,10 @@ public:
     Bitmap gamewin;
     Bitmap mew;
     Bitmap pikachu;
+    Bitmap nextlevel;
+
     Bitmap *bitmaps[FILE_COUNT] = {&background, &wall, &head, &segment, &start, &startgame, &gameover, &gamewin, &mew,
-                                   &pikachu};
+                                   &pikachu, &nextlevel};
 
     ~Resources();
 
